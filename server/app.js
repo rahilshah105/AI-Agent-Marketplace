@@ -1,4 +1,4 @@
-// Server Entry for AI Agent Marketplace
+// app.js
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
@@ -10,14 +10,11 @@ import { clerkWebhooks, stripeWebhooks } from './controllers/webhooks.js';
 import creatorRouter from './routes/CreatorRoutes.js';
 import agentRouter from './routes/agentRoutes.js';
 
-// Initialize Express
 const app = express();
-
-// Connect to database
 await connectDB();
 await connectCloudinary();
 
-// Middlewares
+// CORS + preflight
 const corsOptions = {
   origin: 'http://localhost:5173',
   methods: ['GET','POST','PUT','DELETE','OPTIONS'],
@@ -26,21 +23,19 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.options('*', (_req, res) => res.sendStatus(200));
-// ensures that the user is auth
+
+// Webhooks before auth
+app.post('/clerk',  express.json(),                          clerkWebhooks);
+app.post('/stripe', express.raw({ type: 'application/json' }), stripeWebhooks);
+
+// Auth
 app.use(clerkMiddleware());
 
-
 // Routes
-app.get('/', (req, res) => res.send("API Working"));
-app.post('/clerk', express.json(), clerkWebhooks);
-app.post('/stripe', express.raw({ type: 'application/json' }), stripeWebhooks);
+app.get('/', (req, res) => res.send('API Working'));
 app.use('/api/creator', express.json(), creatorRouter);
-app.use('/api/agent', express.json(), agentRouter);
-app.use('/api/user', express.json(), userRouter);
+app.use('/api/agent',   express.json(), agentRouter);
+app.use('/api/user',    express.json(), userRouter);
 
-// Port
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// **DO NOT** call app.listen() here!
+export default app;

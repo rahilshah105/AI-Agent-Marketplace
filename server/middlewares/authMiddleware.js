@@ -1,7 +1,7 @@
 import { clerkClient } from "@clerk/express"
 
 // Middleware ( Protect Educator Routes )
-export const protectEducator = async (req,res,next) => {
+export const protectCreator = async (req,res,next) => {
 
     try {
 
