@@ -18,15 +18,14 @@ await connectDB();
 await connectCloudinary();
 
 // Middlewares
-app.use(cors({
+const corsOptions = {
   origin: 'http://localhost:5173',
   methods: ['GET','POST','PUT','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization'],
   credentials: true,
-}));
-
-// 2) Short-circuit pre-flight
-app.options('*', (req, res) => res.sendStatus(200));
+};
+app.use(cors(corsOptions));
+app.options('*', (_req, res) => res.sendStatus(200));
 // ensures that the user is auth
 app.use(clerkMiddleware());
 
