@@ -1,8 +1,9 @@
 import { v2 as cloudinary } from 'cloudinary'
-import Course from '../models/Agent.js';
+import Agent from '../models/Agent.js';
+import AgentRun from '../models/AgentRun.js';
 import { Purchase } from '../models/Purchase.js';
 import User from '../models/User.js';
-import { clerkClient } from '@clerk/express'
+import { clerkClient } from '@clerk/express';
 
 // Update role to agent creator
 export const updateRoleToCreator = async (req, res) => {
