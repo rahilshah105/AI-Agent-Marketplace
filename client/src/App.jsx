@@ -1,47 +1,46 @@
-import React, { useContext } from 'react'
-import { Routes, Route, useLocation, useMatch } from 'react-router-dom'
-import Navbar from './components/student/Navbar'
-import Home from './pages/student/Home'
-import CourseDetails from './pages/student/CourseDetails'
-import CoursesList from './pages/student/CoursesList'
-import Dashboard from './pages/educator/Dashboard'
-import AddCourse from './pages/educator/AddCourse'
-import MyCourses from './pages/educator/MyCourses'
-import StudentsEnrolled from './pages/educator/StudentsEnrolled'
-import Educator from './pages/educator/Educator'
-import 'quill/dist/quill.snow.css'
+import React from 'react';
+import { Routes, Route, useMatch } from 'react-router-dom';
+import Navbar from './components/user/Navbar';
+import Home from './pages/user/Home';
+import AgentDetails from './pages/user/AgentDetails';
+import AgentsList from './pages/user/AgentsList';
+import Dashboard from './pages/creator/Dashboard';
+import AddAgent from './pages/creator/AddAgent';
+import MyAgents from './pages/creator/MyAgents';
+import AgentRuns from './pages/creator/AgentRuns';
+import Creator from './pages/creator/Creator';
+import 'quill/dist/quill.snow.css';
 import 'react-toastify/dist/ReactToastify.css';
-import { ToastContainer } from 'react-toastify'
-import Player from './pages/student/Player'
-import MyEnrollments from './pages/student/MyEnrollments'
-import Loading from './components/student/Loading'
+import { ToastContainer } from 'react-toastify';
+// import ExecutionResult from './pages/user/ExecutionResult';
+// import MyExecutions from './pages/user/MyExecutions';
+import Loading from './components/user/Loading';
 
 const App = () => {
-
-  const isEducatorRoute = useMatch('/educator/*');
+  const isCreatorRoute = useMatch('/creator/*');
 
   return (
     <div className="text-default min-h-screen bg-white">
       <ToastContainer />
-      {/* Render Student Navbar only if not on educator routes */}
-      {!isEducatorRoute && <Navbar />}
+      {/* Render Navbar only if not on creator routes */}
+      {!isCreatorRoute && <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/course/:id" element={<CourseDetails />} />
-        <Route path="/course-list" element={<CoursesList />} />
-        <Route path="/course-list/:input" element={<CoursesList />} />
-        <Route path="/my-enrollments" element={<MyEnrollments />} />
-        <Route path="/player/:courseId" element={<Player />} />
+        <Route path="/agent/:id" element={<AgentDetails />} />
+        <Route path="/agents" element={<AgentsList />} />
+        <Route path="/agents/:input" element={<AgentsList />} />
+        {/* <Route path="/my-executions" element={<MyExecutions />} />
+        <Route path="/result/:runId" element={<ExecutionResult />} /> */}
         <Route path="/loading/:path" element={<Loading />} />
-        <Route path='/educator' element={<Educator />}>
-          <Route path='/educator' element={<Dashboard />} />
-          <Route path='add-course' element={<AddCourse />} />
-          <Route path='my-courses' element={<MyCourses />} />
-          <Route path='student-enrolled' element={<StudentsEnrolled />} />
+        <Route path="/creator" element={<Creator />}>
+          <Route index element={<Dashboard />} />
+          <Route path="add-agent" element={<AddAgent />} />
+          <Route path="my-agents" element={<MyAgents />} />
+          <Route path="agent-runs" element={<AgentRuns />} />
         </Route>
       </Routes>
     </div>
-  )
-}
+  );
+};
 
-export default App
+export default App;

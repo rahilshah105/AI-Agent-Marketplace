@@ -17,20 +17,38 @@ export const AppContextProvider = (props) => {
     const { user } = useUser()
 
     const [showLogin, setShowLogin] = useState(false)
-    const [isEducator,setIsEducator] = useState(false)
-    const [allCourses, setAllCourses] = useState([])
+    const [isCreator, setIsCreator] = useState(false)
+    const [allAgents, setAllAgents] = useState([])
     const [userData, setUserData] = useState(null)
-    const [enrolledCourses, setEnrolledCourses] = useState([])
+    const [executedAgents, setExecutedAgents] = useState([])
 
-    // Fetch All Courses
-    const fetchAllCourses = async () => {
-
+    // Fetch All Agents
+    const fetchAllAgents = async () => {
         try {
+            const { data } = await axios.get(backendUrl + '/api/agent/all');
+            if (data.success) {
+                setAllAgents(data.agents)
+            } else {
+                toast.error(data.message)
+            }
+        } catch (error) {
+            toast.error(error.message)
+        }
+    }
 
-            const { data } = await axios.get(backendUrl + '/api/course/all');
+    // Fetch User Data
+    const fetchUserData = async () => {
+        try {
+            if (user?.publicMetadata?.role === 'creator') {
+                setIsCreator(true)
+            }
+
+            const token = await getToken();
+            const { data } = await axios.get(backendUrl + '/api/user/data',
+                { headers: { Authorization: `Bearer ${token}` } })
 
             if (data.success) {
-                setAllCourses(data.courses)
+                setUserData(data.user)
             } else {
                 toast.error(data.message)
             }
@@ -38,110 +56,39 @@ export const AppContextProvider = (props) => {
         } catch (error) {
             toast.error(error.message)
         }
-
     }
 
-    // Fetch UserData 
-    const fetchUserData = async () => {
-
+    // Fetch Executed Agents for User
+    const fetchExecutedAgents = async () => {
         try {
-
-            if (user.publicMetadata.role === 'educator') {
-                setIsEducator(true)
-            }
-
             const token = await getToken();
-
-            const { data } = await axios.get(backendUrl + '/api/user/data',
+            const { data } = await axios.get(backendUrl + '/api/user/executions',
                 { headers: { Authorization: `Bearer ${token}` } })
 
             if (data.success) {
-                setUserData(data.user)
-            } else (
+                setExecutedAgents(data.executions.reverse())
+            } else {
                 toast.error(data.message)
-            )
-
+            }
         } catch (error) {
             toast.error(error.message)
         }
-
     }
 
-    // Fetch User Enrolled Courses
-    const fetchUserEnrolledCourses = async () => {
-
-        const token = await getToken();
-
-        const { data } = await axios.get(backendUrl + '/api/user/enrolled-courses',
-            { headers: { Authorization: `Bearer ${token}` } })
-
-        if (data.success) {
-            setEnrolledCourses(data.enrolledCourses.reverse())
-        } else (
-            toast.error(data.message)
-        )
-
+    const calculateRating = (agent) => {
+        if (!agent.agentRatings?.length) return 0
+        const total = agent.agentRatings.reduce((acc, val) => acc + val.rating, 0)
+        return Math.floor(total / agent.agentRatings.length)
     }
-
-    // Function to Calculate Course Chapter Time
-    const calculateChapterTime = (chapter) => {
-
-        let time = 0
-
-        chapter.chapterContent.map((lecture) => time += lecture.lectureDuration)
-
-        return humanizeDuration(time * 60 * 1000, { units: ["h", "m"] })
-
-    }
-
-    // Function to Calculate Course Duration
-    const calculateCourseDuration = (course) => {
-
-        let time = 0
-
-        course.courseContent.map(
-            (chapter) => chapter.chapterContent.map(
-                (lecture) => time += lecture.lectureDuration
-            )
-        )
-
-        return humanizeDuration(time * 60 * 1000, { units: ["h", "m"] })
-
-    }
-
-    const calculateRating = (course) => {
-
-        if (course.courseRatings.length === 0) {
-            return 0
-        }
-
-        let totalRating = 0
-        course.courseRatings.forEach(rating => {
-            totalRating += rating.rating
-        })
-        return Math.floor(totalRating / course.courseRatings.length)
-    }
-
-    const calculateNoOfLectures = (course) => {
-        let totalLectures = 0;
-        course.courseContent.forEach(chapter => {
-            if (Array.isArray(chapter.chapterContent)) {
-                totalLectures += chapter.chapterContent.length;
-            }
-        });
-        return totalLectures;
-    }
-
 
     useEffect(() => {
-        fetchAllCourses()
+        fetchAllAgents()
     }, [])
 
-    // Fetch User's Data if User is Logged In
     useEffect(() => {
         if (user) {
             fetchUserData()
-            fetchUserEnrolledCourses()
+            fetchExecutedAgents()
         }
     }, [user])
 
@@ -149,11 +96,10 @@ export const AppContextProvider = (props) => {
         showLogin, setShowLogin,
         backendUrl, currency, navigate,
         userData, setUserData, getToken,
-        allCourses, fetchAllCourses,
-        enrolledCourses, fetchUserEnrolledCourses,
-        calculateChapterTime, calculateCourseDuration,
-        calculateRating, calculateNoOfLectures,
-        isEducator,setIsEducator
+        allAgents, fetchAllAgents,
+        executedAgents, fetchExecutedAgents,
+        calculateRating,
+        isCreator, setIsCreator
     }
 
     return (
