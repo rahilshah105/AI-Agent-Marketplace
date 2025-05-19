@@ -1,167 +1,68 @@
-/* ===== Layout ===== */
+/* --- shared --- */
 .header {
-  width: 100%;
-  border-bottom: 1px solid hsl(var(--border));
-  background: hsl(var(--background));
-  position: sticky;
-  top: 0;
-  z-index: 40;
+  @apply border-b border-gray-500 py-4;
+}
+.bar {
+  @apply flex items-center justify-between px-4 sm:px-10 md:px-14 lg:px-36;
+}
+.link, .navButton {
+  @apply text-gray-600 hover:text-gray-900 transition-colors;
+}
+.separator {
+  @apply text-gray-400 px-1;
 }
 
-.inner {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 0.75rem 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* --- desktop nav (≥768 px) --- */
+.desktopNav {
+  @apply hidden md:flex items-center gap-3 lg:gap-5;
 }
-
-/* ===== Logo ===== */
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-weight: 700;
-  text-decoration: none;
-  color: inherit;
-}
-
-.logoIcon {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.5rem;
-  display: grid;
-  place-items: center;
-  font-size: 1rem;
-}
-
-.logoText {
-  font-size: 1.125rem;
-  letter-spacing: -0.01em;
-}
-
-/* ===== Links (desktop) ===== */
-.linksDesktop {
-  display: none;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.875rem;
-}
-
-.link {
-  color: hsl(var(--foreground));
-  text-decoration: none;
-  font-weight: 500;
-}
-.link:hover {
-  color: hsl(var(--primary));
-}
-
-.divider {
-  color: hsl(var(--muted-foreground));
-}
-
-/* ===== Search & Auth (desktop) ===== */
-.actionsDesktop {
-  display: none;
-  align-items: center;
-  gap: 0.75rem;
+.desktopRight {
+  @apply hidden md:flex items-center gap-3 lg:gap-5;
 }
 
 .search {
-  position: relative;
-  display: flex;
-  align-items: center;
+  @apply relative flex items-center;
 }
 .searchIcon {
-  position: absolute;
-  left: 0.5rem;
-  color: hsl(var(--muted-foreground));
+  @apply absolute left-3 text-gray-400;
 }
-/* group logo + links together on the left */
-.leftGroup {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
 .searchInput {
-  padding: 0.375rem 0.75rem 0.375rem 2rem;
-  border: 1px solid hsl(var(--input));
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  background: transparent;
+  @apply pl-10 pr-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/50;
 }
-.searchInput:focus-visible {
-  outline: 2px solid hsl(var(--ring));
+.signIn {
+  @apply px-4 py-2 rounded-md bg-transparent border border-primary text-primary hover:bg-primary hover:text-white transition-colors;
 }
-
-.authBtn {
-  line-height: 1;
+.signUp {
+  @apply px-4 py-2 rounded-md bg-primary text-white hover:bg-primary/90 transition-colors;
 }
 
-/* ===== Mobile button ===== */
-.menuBtn {
-  background: none;
-  border: none;
-  padding: 0.25rem;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
+/* --- mobile ( <768 px ) --- */
+.menuButton {
+  @apply md:hidden p-2 text-gray-600;
 }
-
-/* ===== Mobile drawer ===== */
-.mobileDrawer {
-  background: hsl(var(--background));
-  border-top: 1px solid hsl(var(--border));
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.mobilePanel {
+  @apply md:hidden flex flex-col gap-6 px-4 pb-6 pt-4;
 }
-
 .mobileSearch {
-  position: relative;
+  @apply flex items-center gap-2;
 }
-
-.linksMobile {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.mobileLinks {
+  @apply flex flex-col gap-4;
 }
-
-.linkMobile {
-  text-decoration: none;
-  color: hsl(var(--foreground));
-  font-weight: 500;
-  font-size: 0.95rem;
-}
-.linkMobile:hover {
-  color: hsl(var(--primary));
-}
-
 .mobileAuth {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-.mobileAuthBtn {
-  width: 100%;
+  @apply flex flex-col gap-2;
 }
 
-/* ===== Breakpoints ===== */
+/* hide desktop when mobile, hide mobile when desktop */
 @media (min-width: 768px) {
-  .linksDesktop,
-  .actionsDesktop {
-    display: flex;
-  }
-  .menuBtn {
+  .mobilePanel,
+  .menuButton {
     display: none;
   }
-  .mobileDrawer {
+}
+@media (max-width: 767px) {
+  .desktopNav,
+  .desktopRight {
     display: none;
   }
 }

@@ -1,108 +1,164 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useContext, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { Search, Menu, X } from "lucide-react";
-import { Button } from "../ui/button";
-import { useClerk } from "@clerk/clerk-react";          // ✧ add Clerk hooks
-import styles from "./Header.module.css";
+import { useClerk, UserButton, useUser } from "@clerk/clerk-react";
+import axios from "axios";
+import { toast } from "react-toastify";
+import logo2 from '../../assets/logo2.png';
+
+import { AppContext } from "../../context/AppContext";
+import { assets } from "../../assets/assets";
 
 const Header = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { openSignIn, openSignUp } = useClerk();        // ✧ get modals
+  const { backendUrl, isCreator, setIsCreator, navigate, getToken } =
+    useContext(AppContext);
+
+  const { openSignIn, openSignUp } = useClerk();
+  const { user } = useUser();
+
+  const location = useLocation();
+  const isAgentPage = location.pathname.includes("/agents");
+
+  const [open, setOpen] = useState(false);
+
+  const becomeCreator = async () => {
+    try {
+      if (isCreator) return navigate("/creator");
+
+      const token = await getToken();
+      const { data } = await axios.get(
+        `${backendUrl}/api/creator/update-role`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      data.success ? (toast.success(data.message), setIsCreator(true))
+                   : toast.error(data.message);
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
 
   return (
-    <header className={styles.header}>
-      <div className={styles.inner}>
-        {/* ─────────── Left group ─────────── */}
-        <div className={styles.leftGroup}>
-          <Link to="/" className={styles.logo}>
-            <span className={styles.logoIcon}>A</span>
-            <span className={styles.logoText}>AgentMarket</span>
-          </Link>
+    <header
+      className={`border-b border-gray-500/30 py-4 ${
 
-          {/* Nav now lives inside the left-hand group */}
-          <nav className={styles.linksDesktop}>
-            <Link to="/creator" className={styles.link}>Creator&nbsp;Dashboard</Link>
-            <span className={styles.divider}>|</span>
-            <Link to="/my-agents" className={styles.link}>My&nbsp;Agents</Link>
-          </nav>
-        </div>
+        isAgentPage ? "bg-white" : "bg-white"
+      }`}
+    >
+      {/* ---- top bar ---- */}
+      <div className="flex items-center justify-between px-2 sm:px-8 md:px-8 lg:px-8">
+        {/* logo */}
 
-        {/* ─────────── Right side (search + auth) ─────────── */}
-        <div className={styles.actionsDesktop}>
-          <div className={styles.search}>
-            <Search className={styles.searchIcon} size={18} />
+<img
+  src={logo2}
+  alt="Promptly logo"
+  className="w-28 lg:w-32 cursor-pointer"
+  onClick={() => navigate("/")}
+/>
+
+
+
+        {/* --- NAV + SEARCH + AUTH (desktop ≥ md) --- */}
+        <div className="hidden md:flex items-center gap-4">
+          {/* nav links */}
+          <div className="flex items-center gap-4 text-gray-600">
+            {user && (
+
+                <button onClick={becomeCreator}>
+              {isCreator ? "Creator Dashboard" : "Become an Agent Creator"}
+            </button>
+            )}
+            {user && (
+              <>
+                <span>|</span>
+                <Link to="/my-agents" className="hover:text-gray-900">
+                  My&nbsp;Agents
+                </Link>
+              </>
+            )}
+          </div>
+
+          {/* search bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
-              className={styles.searchInput}
               type="text"
               placeholder="Search agents…"
+              className="pl-10 pr-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
 
-          {/* open Clerk modals on click */}
-          <Button
-            size="sm"
-            variant="secondary"
-            className={styles.authBtn}
-            onClick={() => openSignUp()}
-          >
-            Sign Up
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className={styles.authBtn}
-            onClick={() => openSignIn()}
-          >
-            Sign In
-          </Button>
+          {/* auth */}
+          {user ? (
+            <UserButton afterSignOutUrl="/" />
+          ) : (
+            <>
+              <button
+                onClick={openSignIn}
+                className="px-4 py-2 rounded-md border border-primary text-primary hover:bg-primary hover:text-white transition-colors"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={openSignUp}
+                className="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
+              >
+                Sign Up
+              </button>
+            </>
+          )}
         </div>
 
-        {/* ─────────── Mobile toggle ─────────── */}
+        {/* burger (mobile) */}
         <button
-          className={styles.menuBtn}
-          onClick={() => setMobileMenuOpen((p) => !p)}
-          aria-label="Toggle navigation"
+          className="md:hidden p-2 text-gray-600"
+          onClick={() => setOpen(!open)}
         >
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          {open ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
-      {/* ─────────── Mobile drawer ─────────── */}
-      {mobileMenuOpen && (
-        <div className={styles.mobileDrawer}>
-          <div className={styles.mobileSearch}>
-            <Search className={styles.searchIcon} size={18} />
+      {/* ---- mobile panel ---- */}
+      {open && (
+        <div className="md:hidden flex flex-col gap-6 px-4 pb-6 pt-4">
+          {/* search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
-              className={styles.searchInput}
               type="text"
               placeholder="Search agents…"
+              className="pl-10 pr-3 py-2 w-full rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
 
-          <nav className={styles.linksMobile}>
-            <Link to="/creator" className={styles.linkMobile} onClick={() => setMobileMenuOpen(false)}>
-              Creator Dashboard
-            </Link>
-            <Link to="/my-agents" className={styles.linkMobile} onClick={() => setMobileMenuOpen(false)}>
-              My Agents
-            </Link>
-          </nav>
+          {/* nav links */}
+          <div className="flex flex-col gap-4 text-gray-700">
+            <button onClick={becomeCreator}>
+              {isCreator ? "Creator Dashboard" : "Become an Agent Creator"}
+            </button>
+            {user && <Link to="/my-agents">My&nbsp;Agents</Link>}
+          </div>
 
-          <div className={styles.mobileAuth}>
-            <Button
-              variant="secondary"
-              className={styles.mobileAuthBtn}
-              onClick={() => { openSignUp(); setMobileMenuOpen(false); }}
-            >
-              Sign Up
-            </Button>
-            <Button
-              variant="outline"
-              className={styles.mobileAuthBtn}
-              onClick={() => { openSignIn(); setMobileMenuOpen(false); }}
-            >
-              Sign In
-            </Button>
+          {/* auth */}
+          <div className="flex flex-col gap-2">
+            {user ? (
+              <UserButton afterSignOutUrl="/" />
+            ) : (
+              <>
+                <button
+                  onClick={openSignIn}
+                  className="w-full px-4 py-2 rounded-md border border-primary text-primary hover:bg-primary hover:text-white transition-colors"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={openSignUp}
+                  className="w-full px-4 py-2 rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

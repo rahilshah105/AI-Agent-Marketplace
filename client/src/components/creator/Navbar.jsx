@@ -1,84 +1,123 @@
-import React, { useContext } from 'react';
-import { assets } from '../../assets/assets';
-import { Link, useLocation } from 'react-router-dom';
-import { AppContext } from '../../context/AppContext';
-import { useClerk, UserButton, useUser } from '@clerk/clerk-react';
-import { toast } from 'react-toastify';
-import axios from 'axios';
+import React, { useContext, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Search, Menu, X } from "lucide-react";
+import { useClerk, UserButton, useUser } from "@clerk/clerk-react";
+import axios from "axios";
+import { toast } from "react-toastify";
+
+import { AppContext } from "../../context/AppContext";
+import { assets } from "../../assets/assets";
 
 const Navbar = () => {
-  const location = useLocation();
-  const isAgentPage = location.pathname.includes('/agents');
+  const { backendUrl, isCreator, setIsCreator, navigate, getToken } =
+    useContext(AppContext);
 
-const { backendUrl, isCreator, setIsCreator, navigate, getToken } = useContext(AppContext);
-  const { openSignIn } = useClerk();
+  const { openSignIn, openSignUp } = useClerk();
   const { user } = useUser();
+
+  const location = useLocation();
+  const isAgentPage = location.pathname.includes("/agents");
+
+  const [open, setOpen] = useState(false);
 
   const becomeCreator = async () => {
     try {
-      if (isCreator) {
-        navigate('/creator');
-        return;
-      }
+      if (isCreator) return navigate("/creator");
 
       const token = await getToken();
-      const { data } = await axios.get(`${backendUrl}/api/creator/update-role`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const { data } = await axios.get(
+        `${backendUrl}/api/creator/update-role`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      if (data.success) {
-        toast.success(data.message);
-        setIsCreator(true);
-      } else {
-        toast.error(data.message);
-      }
-    } catch (error) {
-      toast.error(error.message);
+      data.success ? (toast.success(data.message), setIsCreator(true))
+                   : toast.error(data.message);
+    } catch (err) {
+      toast.error(err.message);
     }
   };
 
   return (
-    <div className={`flex items-center justify-between px-4 sm:px-10 md:px-14 lg:px-36 border-b border-gray-500 py-4 ${isAgentPage ? 'bg-white' : 'bg-cyan-100/70'}`}>
-      <img onClick={() => navigate('/')} src={assets.logo} alt="Logo" className="w-28 lg:w-32 cursor-pointer" />
+    <header
+      className={`border-b border-gray-500/30 py-4 ${
 
-      {/* Desktop */}
-      <div className="md:flex hidden items-center gap-5 text-gray-500">
-        <div className="flex items-center gap-5">
-          {user && (
-            <>
-              <button onClick={becomeCreator}>
-                {isCreator ? 'Creator Dashboard' : 'Become an Agent Creator'}
-              </button>
-              | <Link to="/my-agents">My Agents</Link>
-            </>
-          )}
+        isAgentPage ? "bg-white" : "bg-white"
+      }`}
+    >
+      {/* ---- top bar ---- */}
+      <div className="flex items-center justify-between px-2 sm:px-8 md:px-8 lg:px-8">
+        {/* logo */}
+        <img
+          src={assets.logo}
+          alt="AgentMarket logo"
+          className="w-28 lg:w-32 cursor-pointer"
+          onClick={() => navigate("/")}
+        />
+
+        {/* --- NAV + SEARCH + AUTH (desktop ≥ md) --- */}
+        <div className="hidden md:flex items-center gap-4">
+          {/* nav links */}
+          <div className="flex items-center gap-4 text-gray-600">
+      <div className="flex items-center gap-5 text-gray-500 relative">
+        <p>Hi! {user.fullName}</p>
+      </div>
+          </div>
         </div>
-        {user ? (
-          <UserButton />
-        ) : (
-          <button onClick={openSignIn} className="bg-blue-600 text-white px-5 py-2 rounded-full">
-            Sign In
-          </button>
-        )}
+
+        {/* burger (mobile) */}
+        <button
+          className="md:hidden p-2 text-gray-600"
+          onClick={() => setOpen(!open)}
+        >
+          {open ? <X size={24} /> : <Menu size={24} />}
+        </button>
       </div>
 
-      {/* Mobile */}
-      <div className="md:hidden flex items-center gap-2 sm:gap-5 text-gray-500">
-        <div className="flex items-center gap-1 sm:gap-2 max-sm:text-xs">
-          <button onClick={becomeCreator}>
-            {isCreator ? 'Creator Dashboard' : 'Become an Agent Creator'}
-          </button>
-          | {user && <Link to="/my-agents">My Agents</Link>}
+      {/* ---- mobile panel ---- */}
+      {open && (
+        <div className="md:hidden flex flex-col gap-6 px-4 pb-6 pt-4">
+          {/* search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search agents…"
+              className="pl-10 pr-3 py-2 w-full rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+          </div>
+
+          {/* nav links */}
+          <div className="flex flex-col gap-4 text-gray-700">
+            <button onClick={becomeCreator}>
+              {isCreator ? "Creator Dashboard" : "Become an Agent Creator"}
+            </button>
+            {user && <Link to="/my-agents">My&nbsp;Agents</Link>}
+          </div>
+
+          {/* auth */}
+          <div className="flex flex-col gap-2">
+            {user ? (
+              <UserButton afterSignOutUrl="/" />
+            ) : (
+              <>
+                <button
+                  onClick={openSignIn}
+                  className="w-full px-4 py-2 rounded-md border border-primary text-primary hover:bg-primary hover:text-white transition-colors"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={openSignUp}
+                  className="w-full px-4 py-2 rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
+          </div>
         </div>
-        {user ? (
-          <UserButton />
-        ) : (
-          <button onClick={openSignIn}>
-            <img src={assets.user_icon} alt="user icon" />
-          </button>
-        )}
-      </div>
-    </div>
+      )}
+    </header>
   );
 };
 
