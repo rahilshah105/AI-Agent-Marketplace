@@ -8,16 +8,16 @@ import axios from 'axios';
 
 const Navbar = () => {
   const location = useLocation();
-  const isAgentsPage = location.pathname.includes('/agents');
+  const isAgentPage = location.pathname.includes('/agents');
 
-  const { backendUrl, isEducator, setIsEducator, navigate, getToken } = useContext(AppContext);
+  const { backendUrl, isCreator, setIsCreator, navigate, getToken } = useContext(AppContext);
 
   const { openSignIn } = useClerk();
   const { user } = useUser();
 
   const becomeCreator = async () => {
     try {
-      if (isEducator) {
+      if (isCreator) {
         navigate('/creator');
         return;
       }
@@ -29,7 +29,7 @@ const Navbar = () => {
 
       if (data.success) {
         toast.success(data.message);
-        setIsEducator(true);
+        setIsCreator(true);
       } else {
         toast.error(data.message);
       }
@@ -41,7 +41,7 @@ const Navbar = () => {
   return (
     <div
       className={`flex items-center justify-between px-4 sm:px-10 md:px-14 lg:px-36 border-b border-gray-500 py-4 ${
-        isAgentsPage ? 'bg-white' : 'bg-cyan-100/70'
+        isAgentPage ? 'bg-white' : 'bg-cyan-100/70'
       }`}
     >
       <img
@@ -51,15 +51,15 @@ const Navbar = () => {
         className="w-28 lg:w-32 cursor-pointer"
       />
 
-      {/* Desktop */}
+      {/* Desktop View */}
       <div className="md:flex hidden items-center gap-5 text-gray-500">
         <div className="flex items-center gap-5">
           {user && (
             <>
               <button onClick={becomeCreator}>
-                {isEducator ? 'Creator Dashboard' : 'Become Creator'}
+                {isCreator ? 'Creator Dashboard' : 'Become an Agent Creator'}
               </button>
-              | <Link to="/my-executions">My Executions</Link>
+              | <Link to="/my-agents">My Agents</Link>
             </>
           )}
         </div>
@@ -70,18 +70,18 @@ const Navbar = () => {
             onClick={() => openSignIn()}
             className="bg-blue-600 text-white px-5 py-2 rounded-full"
           >
-            Create Account
+            Sign In
           </button>
         )}
       </div>
 
-      {/* Mobile */}
+      {/* Mobile View */}
       <div className="md:hidden flex items-center gap-2 sm:gap-5 text-gray-500">
         <div className="flex items-center gap-1 sm:gap-2 max-sm:text-xs">
           <button onClick={becomeCreator}>
-            {isEducator ? 'Creator Dashboard' : 'Become Creator'}
+            {isCreator ? 'Creator Dashboard' : 'Become an Agent Creator'}
           </button>
-          | {user && <Link to="/my-executions">My Executions</Link>}
+          | {user && <Link to="/my-agents">My Agents</Link>}
         </div>
         {user ? (
           <UserButton />

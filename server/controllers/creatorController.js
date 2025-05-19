@@ -1,6 +1,6 @@
 import { v2 as cloudinary } from 'cloudinary'
 import Agent from '../models/Agent.js';
-import AgentRun from '../models/AgentRun.js';
+import { AgentRun } from "../models/AgentRun.js";
 import { Purchase } from '../models/Purchase.js';
 import User from '../models/User.js';
 import { clerkClient } from '@clerk/express';
@@ -8,6 +8,7 @@ import { clerkClient } from '@clerk/express';
 // Update role to agent creator
 export const updateRoleToCreator = async (req, res) => {
   try {
+    console.log("hello")
     const userId = req.auth.userId;
     await clerkClient.users.updateUserMetadata(userId, {
       publicMetadata: { role: 'creator' },
@@ -15,6 +16,28 @@ export const updateRoleToCreator = async (req, res) => {
     res.json({ success: true, message: 'You can now publish agents' });
   } catch (error) {
     res.json({ success: false, message: error.message });
+  }
+};
+
+// Get agent run history
+export const getAgentRunHistory = async (req, res) => {
+  try {
+    const creatorId = req.auth.userId;
+
+    // Find all agents created by the creator
+    const agents = await Agent.find({ creator: creatorId });
+
+    // Extract agent IDs
+    const agentIds = agents.map(agent => agent._id);
+
+    // Find all agent runs for the creator's agents
+    const runs = await AgentRun.find({ agentId: { $in: agentIds } })
+      .populate('userId', 'name imageUrl')
+      .populate('agentId', 'agentName agentThumbnail');
+
+    res.json({ success: true, runs });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -40,6 +63,21 @@ export const addAgent = async (req, res) => {
     res.json({ success: true, message: 'Agent added' });
   } catch (error) {
     res.json({ success: false, message: error.message });
+  }
+};
+
+// Get all agents created by this user
+export const getMyAgents = async (req, res) => {
+  try {
+    console.log("hello")
+    const creatorId = req.auth.userId;
+
+    const agents = await Agent.find({ creator: creatorId }).select('agentName agentDescription agentThumbnail pricePerRun ratings isPublished createdAt')
+;
+
+    res.json({ success: true, agents });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -119,4 +157,3 @@ export const purchaseAgentRun = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
-

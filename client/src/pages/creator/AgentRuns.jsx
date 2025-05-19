@@ -11,7 +11,7 @@ const AgentRuns = () => {
   const fetchAgentRuns = async () => {
     try {
       const token = await getToken();
-      const { data } = await axios.get(`${backendUrl}/api/creator/agent-runs`, {
+      const { data } = await axios.get(`${backendUrl}/api/creator/runs`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

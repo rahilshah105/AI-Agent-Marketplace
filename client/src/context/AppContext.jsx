@@ -20,7 +20,7 @@ export const AppContextProvider = (props) => {
     const [isCreator, setIsCreator] = useState(false)
     const [allAgents, setAllAgents] = useState([])
     const [userData, setUserData] = useState(null)
-    const [executedAgents, setExecutedAgents] = useState([])
+    const [agentRuns, setAgentRuns] = useState([])
 
     // Fetch All Agents
     const fetchAllAgents = async () => {
@@ -51,6 +51,7 @@ export const AppContextProvider = (props) => {
                 setUserData(data.user)
             } else {
                 toast.error(data.message)
+                 console.log("API Error:", data.message)
             }
 
         } catch (error) {
@@ -59,14 +60,14 @@ export const AppContextProvider = (props) => {
     }
 
     // Fetch Executed Agents for User
-    const fetchExecutedAgents = async () => {
+    const fetchUserAgentRuns = async () => {
         try {
             const token = await getToken();
             const { data } = await axios.get(backendUrl + '/api/user/executions',
-                { headers: { Authorization: `Bearer ${token}` } })
+                { headers: { Authorization: `Bearer ${token}` } });
 
             if (data.success) {
-                setExecutedAgents(data.executions.reverse())
+                setAgentRuns(data.executions.reverse())
             } else {
                 toast.error(data.message)
             }
@@ -88,7 +89,7 @@ export const AppContextProvider = (props) => {
     useEffect(() => {
         if (user) {
             fetchUserData()
-            fetchExecutedAgents()
+            // fetchUserAgentRuns()
         }
     }, [user])
 
@@ -97,7 +98,7 @@ export const AppContextProvider = (props) => {
         backendUrl, currency, navigate,
         userData, setUserData, getToken,
         allAgents, fetchAllAgents,
-        executedAgents, fetchExecutedAgents,
+        agentRuns, fetchUserAgentRuns,
         calculateRating,
         isCreator, setIsCreator
     }

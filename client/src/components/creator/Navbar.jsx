@@ -1,22 +1,82 @@
 import React, { useContext } from 'react';
 import { assets } from '../../assets/assets';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { AppContext } from '../../context/AppContext';
-import { UserButton, useUser } from '@clerk/clerk-react';
+import { useClerk, UserButton, useUser } from '@clerk/clerk-react';
+import { toast } from 'react-toastify';
+import axios from 'axios';
 
-const Navbar = ({ bgColor }) => {
+const Navbar = () => {
+  const location = useLocation();
+  const isAgentPage = location.pathname.includes('/agents');
 
-  const { isEducator } = useContext(AppContext)
-  const { user } = useUser()
+const { backendUrl, isCreator, setIsCreator, navigate, getToken } = useContext(AppContext);
+  const { openSignIn } = useClerk();
+  const { user } = useUser();
 
-  return isEducator && user && (
-    <div className={`flex items-center justify-between px-4 md:px-8 border-b border-gray-500 py-3 ${bgColor}`}>
-      <Link to="/">
-        <img src={assets.logo} alt="Logo" className="w-28 lg:w-32" />
-      </Link>
-      <div className="flex items-center gap-5 text-gray-500 relative">
-        <p>Hi! {user.fullName}</p>
-        <UserButton />
+  const becomeCreator = async () => {
+    try {
+      if (isCreator) {
+        navigate('/creator');
+        return;
+      }
+
+      const token = await getToken();
+      const { data } = await axios.get(`${backendUrl}/api/creator/update-role`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (data.success) {
+        toast.success(data.message);
+        setIsCreator(true);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  return (
+    <div className={`flex items-center justify-between px-4 sm:px-10 md:px-14 lg:px-36 border-b border-gray-500 py-4 ${isAgentPage ? 'bg-white' : 'bg-cyan-100/70'}`}>
+      <img onClick={() => navigate('/')} src={assets.logo} alt="Logo" className="w-28 lg:w-32 cursor-pointer" />
+
+      {/* Desktop */}
+      <div className="md:flex hidden items-center gap-5 text-gray-500">
+        <div className="flex items-center gap-5">
+          {user && (
+            <>
+              <button onClick={becomeCreator}>
+                {isCreator ? 'Creator Dashboard' : 'Become an Agent Creator'}
+              </button>
+              | <Link to="/my-agents">My Agents</Link>
+            </>
+          )}
+        </div>
+        {user ? (
+          <UserButton />
+        ) : (
+          <button onClick={openSignIn} className="bg-blue-600 text-white px-5 py-2 rounded-full">
+            Sign In
+          </button>
+        )}
+      </div>
+
+      {/* Mobile */}
+      <div className="md:hidden flex items-center gap-2 sm:gap-5 text-gray-500">
+        <div className="flex items-center gap-1 sm:gap-2 max-sm:text-xs">
+          <button onClick={becomeCreator}>
+            {isCreator ? 'Creator Dashboard' : 'Become an Agent Creator'}
+          </button>
+          | {user && <Link to="/my-agents">My Agents</Link>}
+        </div>
+        {user ? (
+          <UserButton />
+        ) : (
+          <button onClick={openSignIn}>
+            <img src={assets.user_icon} alt="user icon" />
+          </button>
+        )}
       </div>
     </div>
   );

@@ -18,8 +18,15 @@ export const getAgentById = async (req, res) => {
   const { id } = req.params;
   try {
     const agentData = await Agent.findById(id).populate('creator');
-    res.json({ success: true, agentData });
+
+    if (!agentData) {
+      return res.status(404).json({ success: false, message: "Agent not found" });
+    }
+
+    console.log("Agent API response:", agentData); // ✅ fixed variable
+    return res.json({ success: true, agent: agentData }); // ✅ consistent key name
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    console.error("Error in getAgentById:", error);
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

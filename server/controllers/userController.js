@@ -1,5 +1,6 @@
 import Agent from "../models/Agent.js";
-import AgentRun from "../models/AgentRun.js";
+import { AgentRun } from "../models/AgentRun.js";
+
 import { Purchase } from "../models/Purchase.js";
 import User from "../models/User.js";
 import stripe from "stripe";
@@ -7,6 +8,9 @@ import stripe from "stripe";
 // Get User Data
 export const getUserData = async (req, res) => {
   try {
+    if (!req.auth || !req.auth.userId) {
+      return res.json({ success: false, message: "Unauthorizedd" });
+    }
     const userId = req.auth.userId;
     const user = await User.findById(userId);
     if (!user) {
@@ -73,15 +77,43 @@ export const purchaseAgentRun = async (req, res) => {
 };
 
 // Get User Executed Agents
-export const userExecutedAgents = async (req, res) => {
+export const userPurchasedAgents = async (req, res) => {
   try {
+    if (!req.auth?.userId) {
+      return res.json({ success: false, message: "Unauthorized" });
+    }
+
     const userId = req.auth.userId;
-    const agentRuns = await AgentRun.find({ userId }).populate("agentId");
-    res.json({ success: true, agentRuns });
+
+    // 1) fetch all completed purchases for this user
+    const purchases = await Purchase
+      .find({ userId, status: "completed" })
+      .sort({ createdAt: -1 })          // newest first
+      .populate("agentId", "-__v");     // populate Agent doc, drop __v
+
+    // 2) keep just the unique agent documents
+    const seen = new Set();
+    const agents = [];
+    purchases.forEach(p => {
+      if (p.agentId && !seen.has(String(p.agentId._id))) {
+        seen.add(String(p.agentId._id));
+        agents.push(p.agentId);
+      }
+    });
+
+    return res.json({
+      success: true,
+      agents,
+      message:
+        agents.length === 0
+          ? "You haven't purchased any agents yet."
+          : "Purchased agents retrieved successfully."
+    });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    return res.json({ success: false, message: error.message });
   }
 };
+
 
 // Add Rating to Agent
 export const addUserRating = async (req, res) => {

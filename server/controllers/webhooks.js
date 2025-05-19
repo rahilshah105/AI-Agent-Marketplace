@@ -1,5 +1,5 @@
 import Agent from "../models/Agent.js";
-import AgentRun from "../models/AgentRun.js";
+import { AgentRun } from "../models/AgentRun.js";
 import { Purchase } from "../models/Purchase.js";
 import User from "../models/User.js";
 import stripe from "stripe";
@@ -123,6 +123,7 @@ export const addUserRating = async (req, res) => {
 
 // Clerk Webhook
 export const clerkWebhooks = async (req, res) => {
+  console.log("heldlodo")
   try {
     const whook = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
     await whook.verify(JSON.stringify(req.body), {
