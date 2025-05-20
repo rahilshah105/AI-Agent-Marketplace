@@ -11,6 +11,7 @@ import Home            from './pages/user/Home';
 import AgentDetails    from './pages/user/AgentDetails';
 import AgentsList      from './pages/user/AgentsList';
 import MyAgents        from './pages/user/MyAgents';     // NEW – purchased agents page
+import Runs            from './pages/user/Runs';
 
 /* ---------- creator pages ---------- */
 import Creator         from './pages/creator/Creator';
@@ -43,6 +44,7 @@ const App = () => {
 
         {/* Purchased / executed agents */}
         <Route path="/my-agents"      element={<MyAgents />} />
+        <Route path="/dashboard/runs/:id"   element={<Runs />} />
 
         {/* Misc */}
         <Route path="/loading/:path"  element={<Loading />} />

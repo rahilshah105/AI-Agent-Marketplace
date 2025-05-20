@@ -4,6 +4,7 @@ import { Purchase } from "../models/Purchase.js";
 import User from "../models/User.js";
 import stripe from "stripe";
 import { Webhook } from "svix";
+import stripePkg from "stripe";
 
 // Get User Data
 export const getUserData = async (req, res) => {
@@ -57,15 +58,16 @@ export const purchaseAgentRun = async (req, res) => {
       },
     ];
 
-    const session = await stripeInstance.checkout.sessions.create({
-      success_url: `${origin}/dashboard/runs`,
-      cancel_url: `${origin}/`,
-      line_items: line_items,
-      mode: "payment",
-      metadata: {
-        purchaseId: newPurchase._id.toString(),
-      },
-    });
+const session = await stripeInstance.checkout.sessions.create({
+  success_url: `${origin}/dashboard/runs/${newPurchase._id.toString()}`,
+  cancel_url: `${origin}/`,
+  line_items,
+  mode: "payment",
+  metadata: {
+    purchaseId: newPurchase._id.toString(),
+  },
+});
+
 
     res.json({ success: true, session_url: session.url });
   } catch (error) {
@@ -170,55 +172,101 @@ export const clerkWebhooks = async (req, res) => {
   }
 };
 
-// Stripe Webhook
-export const stripeWebhooks = async (request, response) => {
-  const sig = request.headers["stripe-signature"];
-  const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
+/* ------------------------------------------------------------------
+   STRIPE WEBHOOKS 
+   ------------------------------------------------------------------ */
+
+
+const stripeInstance = new stripePkg(process.env.STRIPE_SECRET_KEY);
+
+export const stripeWebhooks = async (req, res) => {
+  const sig = req.headers["stripe-signature"];
 
   let event;
-
   try {
     event = stripeInstance.webhooks.constructEvent(
-      request.body,
+      req.body,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
-    response.status(400).send(`Webhook Error: ${err.message}`);
+    console.error("❌  Stripe signature check failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  switch (event.type) {
-    case "payment_intent.succeeded": {
-      const paymentIntent = event.data.object;
-      const paymentIntentId = paymentIntent.id;
+  console.log(`📡  Received event ${event.type}`);
 
-      const session = await stripeInstance.checkout.sessions.list({
-        payment_intent: paymentIntentId,
-      });
-
-      const { purchaseId } = session.data[0].metadata;
-      const purchaseData = await Purchase.findById(purchaseId);
-      purchaseData.status = "completed";
-      await purchaseData.save();
-      break;
+  /* -------------------------------------------------------------- */
+  const updatePurchase = async (purchaseId, status, intentId) => {
+    if (!purchaseId) {
+      console.warn("⚠️  No purchaseId on event, skipping update.");
+      return;
     }
-    case "payment_intent.payment_failed": {
-      const paymentIntent = event.data.object;
-      const paymentIntentId = paymentIntent.id;
-
-      const session = await stripeInstance.checkout.sessions.list({
-        payment_intent: paymentIntentId,
-      });
-
-      const { purchaseId } = session.data[0].metadata;
-      const purchaseData = await Purchase.findById(purchaseId);
-      purchaseData.status = "failed";
-      await purchaseData.save();
-      break;
+    const doc = await Purchase.findByIdAndUpdate(
+      purchaseId,
+      { status, paymentIntentId: intentId },
+      { new: true }
+    );
+    if (doc) {
+      console.log(`✅  Purchase ${purchaseId} set to "${status}"`);
+    } else {
+      console.warn(`⚠️  Purchase ${purchaseId} not found in DB`);
     }
-    default:
-      console.log(`Unhandled event type ${event.type}`);
+  };
+
+  try {
+    switch (event.type) {
+      /* ---------- happiest path: Checkout complete + paid -------- */
+      case "checkout.session.completed": {
+        const session = event.data.object;
+        await updatePurchase(
+          session.metadata?.purchaseId,
+          "completed",
+          session.payment_intent
+        );
+        break;
+      }
+
+      /* ---------- async payment methods (e.g. Sofort) ------------ */
+      case "checkout.session.async_payment_succeeded": {
+        const session = event.data.object;
+        await updatePurchase(
+          session.metadata?.purchaseId,
+          "completed",
+          session.payment_intent
+        );
+        break;
+      }
+
+      /* ---------- synchronous card payments ---------------------- */
+      case "payment_intent.succeeded": {
+        const intent = event.data.object;
+        await updatePurchase(
+          intent.metadata?.purchaseId,   // this exists only if you pass metadata on PaymentIntent
+          "completed",
+          intent.id
+        );
+        break;
+      }
+
+      /* ---------- failures (sync + async) ------------------------ */
+      case "payment_intent.payment_failed":
+      case "checkout.session.async_payment_failed": {
+        const obj = event.data.object;
+        await updatePurchase(
+          obj.metadata?.purchaseId,
+          "failed",
+          obj.id || obj.payment_intent
+        );
+        break;
+      }
+
+      default:
+        console.log(`ℹ️  Event ${event.type} ignored`);
+    }
+  } catch (dbErr) {
+    console.error("💥  DB update failed:", dbErr);
   }
 
-  response.json({ received: true });
+  res.json({ received: true });
 };

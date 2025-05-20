@@ -2,27 +2,28 @@
     — shows every agent the current user has PURCHASED
 ------------------------------------------------------------------- */
 import React, { useContext, useEffect, useState } from "react";
-import axios            from "axios";
-import { toast }        from "react-toastify";
+import axios from "axios";
+import { toast } from "react-toastify";
 
-import { AppContext }   from "../../context/AppContext";
-import Loading          from "../../components/user/Loading";
+import { AppContext } from "../../context/AppContext";
+import Loading from "../../components/user/Loading";
+import { X } from "lucide-react";
 
 const MyAgents = () => {
   /* -------------------------------------------------- context ---- */
-  const { backendUrl, getToken, navigate } = useContext(AppContext);
+  const { backendUrl, getToken, navigate, fetchUserData } = useContext(AppContext);
 
   /* ------------------------------------------------ component ---- */
-  const [agents,    setAgents]    = useState([]);  // array of Agent docs
-  const [loading,   setLoading]   = useState(true);
-  const [hasError,  setHasError]  = useState(false);
+  const [agents, setAgents] = useState([]);  // array of Agent docs
+  const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   /* --------------------------------------------- fetch on mount -- */
   useEffect(() => {
     const load = async () => {
       try {
         const token = await getToken();               // Clerk session
-        const res   = await axios.get(
+        const res = await axios.get(
           `${backendUrl}/api/user/my-agents`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -94,14 +95,51 @@ const MyAgents = () => {
                   {agent.agentDescription}
                 </td>
 
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => navigate(`/agent/${agent._id}`)}
-                    className="rounded bg-blue-600 px-4 py-2 text-xs font-medium text-white"
-                  >
-                    View / Run
-                  </button>
-                </td>
+<td className="pr-4 pl-2 py-3">
+  <div className="flex justify-between items-center gap-10 pr-10">
+    {/* View / Run Button */}
+    <button
+      onClick={() => navigate(`/agent/${agent._id}`)}
+      className="rounded bg-blue-600 px-4 py-2 text-xs font-medium text-white"
+    >
+      View / Run
+    </button>
+
+    {/* Remove from Workspace Button */}
+    <button
+      onClick={async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+setAgents((prevAgents) =>
+  prevAgents.filter((a) => a._id.toString() !== agent._id.toString())
+);
+
+try {
+  const token = await getToken();
+  await axios.post(
+    `${backendUrl}/api/user/remove-from-workspace`,
+    { agentId: agent._id },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  toast.success("Agent removed from workspace");
+  // await fetchUserData();
+} catch (error) {
+  toast.error("Failed to remove agent. Please refresh.");
+  console.error("Error removing from workspace:", error);
+}
+
+      }}
+      className="rounded-full bg-red-500 text-white w-6 h-6 flex items-center justify-center"
+      title="Remove"
+    >
+      <X size={12} />
+    </button>
+  </div>
+</td>
+
+
+
               </tr>
             ))}
           </tbody>
@@ -109,6 +147,6 @@ const MyAgents = () => {
       </div>
     </div>
   );
-};
+}
 
 export default MyAgents;

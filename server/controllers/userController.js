@@ -22,61 +22,179 @@ export const getUserData = async (req, res) => {
   }
 };
 
-// Purchase Agent Run
-export const purchaseAgentRun = async (req, res) => {
+// Remove Agent from Workspace
+export const removeFromWorkspace = async (req, res) => {
   try {
     const { agentId } = req.body;
-    const { origin } = req.headers;
     const userId = req.auth.userId;
 
-    const agentData = await Agent.findById(agentId);
-    const userData = await User.findById(userId);
-
-    if (!userData || !agentData) {
-      return res.json({ success: false, message: "Data Not Found" });
+    const user = await User.findById(userId);
+    if (!user) {
+      console.log("User not found");
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    const purchaseData = {
-      agentId: agentData._id,
-      userId,
-      amount: parseFloat(agentData.pricePerRun).toFixed(2),
-    };
+    console.log("Before filter:", user.workspaceAgents);
+    user.workspaceAgents = user.workspaceAgents.filter(
+      (agent) => agent._id.toString() !== agentId
+    );
+    console.log("After filter:", user.workspaceAgents);
 
-    const newPurchase = await Purchase.create(purchaseData);
+    await user.save();
 
-    const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
-    const currency = process.env.CURRENCY.toLowerCase();
+    res.json({ success: true, message: "Agent removed from workspace" });
+  } catch (error) {
+    console.error("Error in removeFromWorkspace:", error);
+    res.status(500).json({ success: false, message: "Failed to remove agent. Please refresh." });
+  }
+};
 
-    const line_items = [
-      {
-        price_data: {
-          currency,
-          product_data: {
-            name: agentData.agentName,
-          },
-          unit_amount: Math.floor(newPurchase.amount * 100),
-        },
-        quantity: 1,
-      },
-    ];
+// Add Agent to Workspace
+export const addToWorkspace = async (req, res) => {
+  try {
+    const { agentId } = req.body;
+    const userId = req.auth.userId;
 
-    const session = await stripeInstance.checkout.sessions.create({
-      success_url: `${origin}/dashboard/runs`,
-      cancel_url: `${origin}/`,
-      line_items: line_items,
-      mode: "payment",
-      metadata: {
-        purchaseId: newPurchase._id.toString(),
-      },
-    });
+    const user = await User.findById(userId);
+    const agent = await Agent.findById(agentId);
 
-    res.json({ success: true, session_url: session.url });
+    if (!user || !agent) {
+      return res.json({ success: false, message: "User or Agent not found" });
+    }
+
+    if (user.workspaceAgents.includes(agentId)) {
+      return res.json({ success: false, message: "Agent already in workspace" });
+    }
+
+    user.workspaceAgents.push(agentId);
+    await user.save();
+
+    res.json({ success: true, message: "Agent added to workspace" });
   } catch (error) {
     res.json({ success: false, message: error.message });
   }
 };
 
+// Run Agent Once (One-Time Use)
+export const runAgent = async (req, res) => {
+  console.log("runnign agent")
+  try {
+    const { purchaseId, input } = req.body;
+    const userId = req.auth.userId;
+
+    if (!purchaseId || !userId) {
+      return res.status(400).json({ success: false, message: "Missing purchaseId or userId" });
+    }
+
+    // 1. Find and validate the purchase
+    const purchase = await Purchase.findOne({
+      _id: purchaseId,
+      userId,
+      // status: "completed",
+      used: { $ne: true },
+    }).populate("agentId");
+
+    if (!purchase) {
+      return res.status(403).json({ success: false, message: "Invalid or already used purchase." });
+    }
+
+    const agent = purchase.agentId;
+
+    // 2. Simulate agent logic (replace with your own logic, OpenAI, etc.)
+    const result = `Agent "${agent.agentName}" processed: ${input}`;
+
+    // 3. Mark the purchase as used
+    purchase.used = true;
+    await purchase.save();
+
+    // 4. Log the run (optional, for history)
+    await AgentRun.create({
+      agentId: agent._id,
+      userId,
+      modelType: agent.modelType,
+      runDate: new Date(),
+      status: "completed",
+      agentName: agent.agentName,
+      agentThumbnail: agent.agentThumbnail,
+    });
+
+    return res.json({ success: true, result });
+  } catch (error) {
+    console.error("Run Agent Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to run agent." });
+  }
+};
+
+
+
+// export const purchaseAgent = async (req, res) => {
+//   try {
+//     const { agentId } = req.body;
+//     const { origin } = req.headers;
+//     const userId = req.auth.userId;
+
+//     const agentData = await Agent.findById(agentId);
+//     const userData = await User.findById(userId);
+
+//     if (!userData || !agentData) {
+//       return res.json({ success: false, message: "Data Not Found" });
+//     }
+
+//     const purchaseData = {
+//       agentId: agentData._id,
+//       userId,
+//       amount: parseFloat(agentData.pricePerRun).toFixed(2),
+//     };
+
+//     const newPurchase = await Purchase.create(purchaseData);
+
+//     const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
+//     const currency = process.env.CURRENCY.toLowerCase();
+
+//     const line_items = [
+//       {
+//         price_data: {
+//           currency,
+//           product_data: {
+//             name: agentData.agentName,
+//           },
+//           unit_amount: Math.floor(newPurchase.amount * 100),
+//         },
+//         quantity: 1,
+//       },
+//     ];
+
+//     const session = await stripeInstance.checkout.sessions.create({
+//       success_url: `${origin}/dashboard/runs`,
+//       cancel_url: `${origin}/`,
+//       line_items: line_items,
+//       mode: "payment",
+//       metadata: {
+//         purchaseId: newPurchase._id.toString(),
+//       },
+//     });
+
+//     // Create AgentRun record after successful purchase
+//     const agentRunData = {
+//       agentId: agentData._id,
+//       userId: userData._id,
+//       modelType: agentData.modelType, // Assuming modelType is available in agentData
+//       runDate: new Date(),
+//       status: "completed", // Or "pending", depending on your workflow
+//       agentName: agentData.agentName,
+//       agentThumbnail: agentData.agentThumbnail
+//     };
+
+//     await AgentRun.create(agentRunData);
+
+//     res.json({ success: true, session_url: session.url });
+//   } catch (error) {
+//     res.json({ success: false, message: error.message });
+//   }
+// };
+
 // Get User Executed Agents
+
 export const userPurchasedAgents = async (req, res) => {
   try {
     if (!req.auth?.userId) {
@@ -85,35 +203,73 @@ export const userPurchasedAgents = async (req, res) => {
 
     const userId = req.auth.userId;
 
-    // 1) fetch all completed purchases for this user
-    const purchases = await Purchase
-      .find({ userId, status: "completed" })
-      .sort({ createdAt: -1 })          // newest first
-      .populate("agentId", "-__v");     // populate Agent doc, drop __v
-
-    // 2) keep just the unique agent documents
-    const seen = new Set();
-    const agents = [];
-    purchases.forEach(p => {
-      if (p.agentId && !seen.has(String(p.agentId._id))) {
-        seen.add(String(p.agentId._id));
-        agents.push(p.agentId);
-      }
-    });
+    // 1) Fetch agents from workspaceAgents
+    const user = await User.findById(userId).populate("workspaceAgents", "-__v");
+    const agents = user?.workspaceAgents || [];
 
     return res.json({
       success: true,
-      agents,
+      agents: agents,
       message:
         agents.length === 0
-          ? "You haven't purchased any agents yet."
-          : "Purchased agents retrieved successfully."
+          ? "You haven't added any agents to your workspace yet."
+          : "Agents retrieved successfully from workspace."
     });
   } catch (error) {
     return res.json({ success: false, message: error.message });
   }
 };
 
+export const purchaseAgentRun = async (req, res) => {
+  try {
+    const { agentId } = req.body;
+    const { origin }  = req.headers;
+    const userId      = req.auth.userId;
+
+    const agent = await Agent.findById(agentId);
+    const user  = await User.findById(userId);
+
+    if (!user || !agent) {
+      return res.json({ success: false, message: "User or agent not found." });
+    }
+
+    /* create a pending purchase ---------------------------------- */
+    const purchase = await Purchase.create({
+      agentId : agent._id,
+      userId,
+      amount  : parseFloat(agent.pricePerRun).toFixed(2),
+      status  : "pending",
+    });
+
+    /* create Stripe checkout session ----------------------------- */
+    const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
+    const currency       = process.env.CURRENCY.toLowerCase();
+
+    const line_items = [
+      {
+        price_data: {
+          currency,
+          product_data: { name: agent.agentName },
+          unit_amount : Math.floor(purchase.amount * 100),
+        },
+        quantity: 1,
+      },
+    ];
+
+    const session = await stripeInstance.checkout.sessions.create({
+      success_url: `${origin}/dashboard/runs/${purchase._id.toString()}`+ `?agent=${encodeURIComponent(agent.agentName)}`,
+      cancel_url : `${origin}/`,
+      line_items,
+      mode       : "payment",
+      metadata   : { purchaseId: purchase._id.toString() },
+    });
+
+    return res.json({ success: true, session_url: session.url });
+  } catch (err) {
+    console.error("purchaseAgentRun error:", err);
+    return res.json({ success: false, message: err.message });
+  }
+};
 
 // Add Rating to Agent
 export const addUserRating = async (req, res) => {

@@ -12,7 +12,15 @@ const purchaseSchema = new mongoose.Schema({
     required: true
   },
   amount: { type: Number, required: true },
-  status: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' }
+  status: {
+    type: String,
+    enum: ['pending', 'completed', 'failed'],
+    default: 'pending'
+  },
+  used: {
+    type: Boolean,
+    default: false
+  }
 }, { timestamps: true });
 
 export const Purchase = mongoose.model('Purchase', purchaseSchema);

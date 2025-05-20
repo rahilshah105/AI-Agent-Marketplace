@@ -41,7 +41,6 @@ app.use(clerkMiddleware());
 app.use('/api/creator', express.json(), creatorRouter);
 app.use('/api/agent', express.json(), agentRouter);
 app.use('/api/user', express.json(), userRouter);
-
 // Port
 const PORT = process.env.PORT || 5001;
 

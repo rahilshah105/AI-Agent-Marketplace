@@ -5,6 +5,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Keep vertical scrollbar space reserved at all times  ───────────── */
+html {
+  /* Chromium / Firefox 97+ */
+  scrollbar-gutter: stable;
+}
+
+/* Safari & older browsers fallback */
+@supports not (scrollbar-gutter: stable) {
+  html {
+    overflow-y: scroll;   /* forces the track to exist even when page is short */
+  }
+}
+
 /* ─── Design-token variables (one single `@layer base`) ─ */
 *{
   font-family: Outfit;
@@ -119,11 +132,15 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    scrollbar-gutter: stable;
   }
 }
 
 ::-webkit-scrollbar{
   display: none;
+}
+body {
+  overflow-y: scroll;   /* always show a vertical scrollbar */
 }
 
 .rich-text { font-size: 15px; color: #7A7B7D; }

@@ -8,5 +8,12 @@ const userSchema = new mongoose.Schema({
   credits: { type: Number, default: 0 }
 }, { timestamps: true });
 
+userSchema.add({
+  workspaceAgents: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Agent' }],
+    default: []
+  }
+});
+
 const User = mongoose.model('User', userSchema);
 export default User;

@@ -28,6 +28,7 @@ export const AppContextProvider = (props) => {
             const { data } = await axios.get(backendUrl + '/api/agent/all');
             if (data.success) {
                 setAllAgents(data.agents)
+                console.log(data.agents)
             } else {
                 toast.error(data.message)
             }
@@ -98,7 +99,7 @@ export const AppContextProvider = (props) => {
         backendUrl, currency, navigate,
         userData, setUserData, getToken,
         allAgents, fetchAllAgents,
-        agentRuns, fetchUserAgentRuns,
+        // agentRuns, fetchUserAgentRuns,
         calculateRating,
         isCreator, setIsCreator
     }
